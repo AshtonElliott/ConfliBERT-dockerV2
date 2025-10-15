@@ -1,3 +1,12 @@
+"""
+CPU-Only Version of ConfliBERT Fine-tuning Script
+This version is optimized for CPU-only training with the following modifications:
+- Explicit CPU device usage
+- Disabled mixed precision training (fp16)
+- CPU-optimized batch sizes and configurations
+- Additional CPU-specific optimizations
+"""
+
 from simpletransformers.classification import MultiLabelClassificationModel, MultiLabelClassificationArgs, ClassificationModel, ClassificationArgs
 from simpletransformers.ner import NERModel, NERArgs
 from example_based import example_based_accuracy, example_based_recall, example_based_precision, example_based_f1
@@ -9,76 +18,41 @@ import numpy as np
 import csv
 import os
 import json
-import math
 import multiprocessing as mp
 mp.set_start_method("spawn", force=True)
 
 
-def sigmoid(x):
-    return 1 / (1 + math.exp(-x))
-
-def output_probabilities_on_test_set(args, model_name, test_df, model_outputs, preds):
-    ner_outputs = []
-    if args.task == "binary":
-        model_outputs = [[round(sigmoid(val),2) for val in row] for row in model_outputs]
-
-    elif args.task == "ner":
-        for i in range(len(model_outputs)): #200
-            for j in range(len(model_outputs[i])): #46
-                t = [round(sigmoid(x),2) for x in model_outputs[i][j][0]]
-                ner_outputs.append(t)
-    else:
-        model_outputs = [[round(val, 2) for val in row] for row in model_outputs]
-
-
-    path = f"{args.output_dir}{model_name}_eval_probabilities.csv"
-
-    if args.dataset=="insightCrime":
-        test_df['labels_txt'] = [['Drug Trafficking', 'Corruption', 'Law Enforcement', 'Homicides', 'Kidnapping', 'Eco-Trafficking', 'Criminal Migration']] * len(test_df)
-    elif args.dataset.startswith("IndiaPolice"):
-        test_df['labels_txt'] = [['Kill', 'Arrest', 'Fail to act', 'Force', 'Any Action']] * len(test_df)
-    elif args.dataset.startswith("satp_relevant"):
-        test_df['labels_txt'] = [['Armed Assault', 'Bombing/Explosion', 'Kidnapping', 'Others', 'Not terrorism']] * len(test_df)
-
-
-    test_df['predictions'] = list(preds)
-    test_df['probabilities'] = list(model_outputs) if not ner_outputs else ner_outputs
-    test_df.to_csv(path, index=False)
-
-
-
 def report_per_epoch(args, test_df, seed, model_configs):
 
-    model_outputs_final, preds_final = None, None
     list_of_results = []
     for epoch in range(1, args.epochs_per_seed+1):
-
+        
         end_dir = "epoch-"+str(epoch)
-
+        
         dirs = [f for f in os.listdir(args.output_dir) if f[-len(end_dir):] == end_dir and os.path.isdir(os.path.join(args.output_dir, f))]
-
+        
         if len(dirs) == 0:
             print("\nCheckpoint not found for epoch", str(epoch))
-
+        
         else:
             checkpoint_dir = os.path.join(args.output_dir, dirs[0])
 
             if args.task == "multilabel":
-                model = MultiLabelClassificationModel(model_configs["architecture"], checkpoint_dir)
+                model = MultiLabelClassificationModel(model_configs["architecture"], checkpoint_dir, use_cuda=False)
 
                 ## Performance data: Evaluating the model on test data
                 predictions, raw_outputs = model.predict(test_df.text.to_list())
                 result_test, model_outputs, wrong_predictions = model.eval_model(test_df)
-
+    
                 result = {k: float(v) for k, v in result_test.items()}
                 result["acc"] = example_based_accuracy([list(test_df.labels[i]) for i, pred in enumerate(predictions)], [list(pred) for pred in predictions])
                 result["prec"] = example_based_precision([list(test_df.labels[i]) for i, pred in enumerate(predictions)], [list(pred) for pred in predictions])
                 result["rec"] = example_based_recall([list(test_df.labels[i]) for i, pred in enumerate(predictions)], [list(pred) for pred in predictions])
                 result["f1"] = example_based_f1([list(test_df.labels[i]) for i, pred in enumerate(predictions)], [list(pred) for pred in predictions])
-
+            
             elif args.task == "ner":
-
-                model = NERModel(model_configs["architecture"], checkpoint_dir)
+                
+                model = NERModel(model_configs["architecture"], checkpoint_dir, use_cuda=False)
 
                 ## Performance data: Evaluating the model on test data
                 # Getting true labels
@@ -98,7 +72,6 @@ def report_per_epoch(args, test_df, seed, model_configs):
                 # Evaluating the model on test data
                 result, model_outputs, preds = model.eval_model(test_df)
 
-                predictions = [pred_label for sentence in preds for pred_label in sentence]
                 # Computing performance metrics thru seqeval
                 y_pred = []
                 y_true = []
@@ -106,7 +79,7 @@ def report_per_epoch(args, test_df, seed, model_configs):
                     if len(pred) == len(true):
                         y_pred.append(pred)
                         y_true.append(true)
-
+                
                 result = {}
                 result['f1_micro'] = float(f1_score(y_true, y_pred, average='micro'))
                 result['f1_macro'] = float(f1_score(y_true, y_pred, average='macro'))
@@ -115,16 +88,14 @@ def report_per_epoch(args, test_df, seed, model_configs):
                 result['prec_macro'] = float(precision_score(y_true, y_pred, average='macro'))
                 result['rec_micro'] = float(recall_score(y_true, y_pred, average='micro'))
                 result['rec_macro'] = float(recall_score(y_true, y_pred, average='macro'))
-
+            
             elif args.task == "binary":
-
-                # Create a MultiLabelClassificationModel
-                model = ClassificationModel(model_configs["architecture"], checkpoint_dir)
+                
+                # Create a Classification Model with CPU-only
+                model = ClassificationModel(model_configs["architecture"], checkpoint_dir, use_cuda=False)
 
                 # Evaluating the model on test data
                 result_np, model_outputs, wrong_predictions = model.eval_model(test_df)
-
-                predictions = [False if row[0] > row[1] else True for row in model_outputs]
 
                 # Collecting relevant results
                 result = {}
@@ -139,11 +110,11 @@ def report_per_epoch(args, test_df, seed, model_configs):
                 result["rec"] = float((result["tp"])/(result["tp"]+result["fn"]))
                 result["f1"] = float(2*(result["prec"]*result["rec"])/(result["prec"]+result["rec"]))
 
-
+        
             elif args.task == "multiclass":
 
-                # Create a MultiLabelClassificationModel
-                model = ClassificationModel(model_configs["architecture"], checkpoint_dir)
+                # Create a Classification Model with CPU-only
+                model = ClassificationModel(model_configs["architecture"], checkpoint_dir, use_cuda=False)
 
                 # Evaluating the model on test data
                 predictions, raw_outputs = model.predict(test_df.text.to_list())
@@ -170,12 +141,10 @@ def report_per_epoch(args, test_df, seed, model_configs):
             result["epoch"] = epoch
 
             list_of_results.append(result)
-            model_outputs_final = model_outputs
-            preds_final = predictions
 
 
     results_df = pd.DataFrame.from_dict(list_of_results, orient='columns')
-    outfile_report = os.path.join("./logs/", str(args.dataset)+"_full_report.csv")
+    outfile_report = os.path.join("./logs/", str(args.dataset)+"_full_report_cpu.csv")
 
     if os.path.isfile(outfile_report):
         results_df.to_csv(outfile_report, mode='a', header=False, index=False)
@@ -183,16 +152,15 @@ def report_per_epoch(args, test_df, seed, model_configs):
         results_df.to_csv(outfile_report, mode='a', header=True, index=False)
 
 
-    output_probabilities_on_test_set(args, model_configs['model_name'], test_df, model_outputs_final, preds_final)
-
 
 
 
 
 def train_multi_seed(args, train_df, eval_df, test_df, model_configs):
+
     init_seed = args.initial_seed
     for curr_seed in range(init_seed, init_seed + args.num_of_seeds):
-
+        
         if args.task == "multilabel":
             result = train_multilabel(args, train_df, eval_df, test_df, curr_seed, model_configs)
         if args.task == "multiclass":
@@ -203,13 +171,13 @@ def train_multi_seed(args, train_df, eval_df, test_df, model_configs):
             result = train_binary(args, train_df, eval_df, test_df, curr_seed, model_configs)
 
         # Recording best results for a given seed
-        log_filename = os.path.join("./logs/", args.dataset+"_best_results.json")
+        log_filename = os.path.join("./logs/", args.dataset+"_best_results_cpu.json")
         out_dict = {"data_name":args.dataset, "model_name": model_configs["model_name"], "seed": curr_seed, "train_batch_size": args.train_batch_size, "epochs": args.epochs_per_seed, "result": result}
 
         with open(log_filename, 'a') as fout:
             json.dump(out_dict, fout)
             fout.write('\n')
-
+        
         if args.report_per_epoch:
             report_per_epoch(args, test_df, curr_seed, model_configs)
 
@@ -217,17 +185,21 @@ def train_multi_seed(args, train_df, eval_df, test_df, model_configs):
 
 def train_binary(args, train_df, eval_df, test_df, seed, model_configs):
 
-    # Training Arguments
+    # Training Arguments - CPU Optimized
     model_args = ClassificationArgs()
     model_args.manual_seed = seed
     model_args.best_model_dir = os.path.join(args.output_dir, "best_model", "")
     model_args.output_dir =  args.output_dir
     model_args.num_train_epochs = args.epochs_per_seed
-    model_args.fp16 = False
+    model_args.fp16 = False  # Disabled for CPU
+    model_args.use_cuda = False  # Explicitly disable CUDA
     model_args.max_seq_length = args.max_seq_length
-    model_args.train_batch_size = args.train_batch_size
+    # CPU-optimized batch size (typically smaller for CPU)
+    model_args.train_batch_size = min(args.train_batch_size, 8)  # Cap at 8 for CPU
+    model_args.eval_batch_size = min(args.train_batch_size, 8)   # Cap at 8 for CPU
     model_args.save_steps = -1
-    model_args.use_multiprocessing = False
+    model_args.use_multiprocessing = False  # Disabled for CPU compatibility
+    model_args.use_multiprocessing_for_evaluation = False
     # model_args.save_model_every_epoch = False
     if "do_lower_case" in model_configs:
         model_args.do_lower_case = model_configs["do_lower_case"]
@@ -236,22 +208,23 @@ def train_binary(args, train_df, eval_df, test_df, seed, model_configs):
     model_args.save_eval_checkpoints = False
     # model_args.no_save = True
     model_args.overwrite_output_dir = True
+    model_args.silent = False  # Keep logging for CPU debugging
 
     if not args.report_per_epoch:
         model_args.save_model_every_epoch = False
         model_args.no_save = True
 
-    # Create a MultiLabelClassificationModel
+    # Create a Classification Model with CPU-only
     architecture = model_configs["architecture"]
     pretrained_model = model_configs["model_path"]
-    model = ClassificationModel(architecture, pretrained_model, args=model_args, use_cuda=False)
+    model = ClassificationModel(architecture, pretrained_model, use_cuda=False, args=model_args)
 
     # Train the model
     model.train_model(train_df, eval_df=eval_df)
 
     # Evaluating the model on test data
     result_np, model_outputs, wrong_predictions = model.eval_model(test_df)
-
+    
     # Collecting relevant results
     result = {}
     for k, v in result_np.items():
@@ -259,7 +232,7 @@ def train_binary(args, train_df, eval_df, test_df, seed, model_configs):
             result[k] = float(v)
         else:
             result[k] = int(v)
-
+    
     result["acc"] = float((result["tp"]+result["tn"])/(result["tp"]+result["tn"]+result["fp"]+result["fn"]))
     result["prec"] = float((result["tp"])/(result["tp"]+result["fp"]))
     result["rec"] = float((result["tp"])/(result["tp"]+result["fn"]))
@@ -270,28 +243,30 @@ def train_binary(args, train_df, eval_df, test_df, seed, model_configs):
 
 def train_multilabel(args, train_df, eval_df, test_df, seed, model_configs):
 
-    # Training Arguments
+    # Training Arguments - CPU Optimized
     model_args = MultiLabelClassificationArgs()
     model_args.manual_seed = seed
     model_args.best_model_dir = os.path.join(args.output_dir, "best_model", "")
     model_args.output_dir =  args.output_dir
     model_args.num_train_epochs = args.epochs_per_seed
-    model_args.fp16 = False
+    model_args.fp16 = False  # Disabled for CPU
+    model_args.use_cuda = False  # Explicitly disable CUDA
     model_args.max_seq_length = args.max_seq_length
-    model_args.train_batch_size = args.train_batch_size
+    # CPU-optimized batch size (typically smaller for CPU)
+    model_args.train_batch_size = min(args.train_batch_size, 8)  # Cap at 8 for CPU
+    model_args.eval_batch_size = min(args.train_batch_size, 8)   # Cap at 8 for CPU
     model_args.save_steps = -1
-    model_args.use_multiprocessing = False
+    model_args.use_multiprocessing = False  # Disabled for CPU compatibility
+    model_args.use_multiprocessing_for_evaluation = False
     # model_args.save_model_every_epoch = False
     if "do_lower_case" in model_configs:
         model_args.do_lower_case = model_configs["do_lower_case"]
     model_args.evaluate_during_training = True
     model_args.save_best_model = True
     model_args.save_eval_checkpoints = False
-
-    # model_args.use_cuda = False
-
     # model_args.no_save = True
     model_args.overwrite_output_dir = True
+    model_args.silent = False  # Keep logging for CPU debugging
 
     if not args.report_per_epoch:
         model_args.save_model_every_epoch = False
@@ -299,13 +274,13 @@ def train_multilabel(args, train_df, eval_df, test_df, seed, model_configs):
 
 
 
-    # Create a MultiLabelClassificationModel
+    # Create a MultiLabelClassificationModel with CPU-only
     architecture = model_configs["architecture"]
     pretrained_model = model_configs["model_path"]
-    model = MultiLabelClassificationModel(architecture, pretrained_model, num_labels=args.num_labels, args=model_args, use_cuda=False)
+    model = MultiLabelClassificationModel(architecture, pretrained_model, num_labels=args.num_labels, use_cuda=False, args=model_args)
 
     # Train the model
-    model.train_model(train_df, eval_df=eval_df)
+    model.train_model(train_df, eval_df=eval_df) 
 
     # Evaluatinge the model on test data
     predictions, raw_outputs = model.predict(test_df.text.to_list())
@@ -330,6 +305,7 @@ def train_multilabel(args, train_df, eval_df, test_df, seed, model_configs):
     result["f1_macro_labelBased"] = metrics.f1_score(y_true, y_pred, average='macro')
 
 
+
     return result
 
 
@@ -341,17 +317,21 @@ def train_multilabel(args, train_df, eval_df, test_df, seed, model_configs):
 
 def train_multiclass(args, train_df, eval_df, test_df, seed, model_configs):
 
-    # Training Arguments
+    # Training Arguments - CPU Optimized
     model_args = ClassificationArgs()
     model_args.manual_seed = seed
     model_args.best_model_dir = os.path.join(args.output_dir, "best_model", "")
     model_args.output_dir =  args.output_dir
     model_args.num_train_epochs = args.epochs_per_seed
-    model_args.fp16 = False
+    model_args.fp16 = False  # Disabled for CPU
+    model_args.use_cuda = False  # Explicitly disable CUDA
     model_args.max_seq_length = args.max_seq_length
-    model_args.train_batch_size = args.train_batch_size
+    # CPU-optimized batch size (typically smaller for CPU)
+    model_args.train_batch_size = min(args.train_batch_size, 8)  # Cap at 8 for CPU
+    model_args.eval_batch_size = min(args.train_batch_size, 8)   # Cap at 8 for CPU
     model_args.save_steps = -1
-    model_args.use_multiprocessing = False
+    model_args.use_multiprocessing = False  # Disabled for CPU compatibility
+    model_args.use_multiprocessing_for_evaluation = False
     # model_args.save_model_every_epoch = False
     if "do_lower_case" in model_configs:
         model_args.do_lower_case = model_configs["do_lower_case"]
@@ -360,15 +340,16 @@ def train_multiclass(args, train_df, eval_df, test_df, seed, model_configs):
     model_args.save_eval_checkpoints = False
     # model_args.no_save = True
     model_args.overwrite_output_dir = True
+    model_args.silent = False  # Keep logging for CPU debugging
 
     if not args.report_per_epoch:
         model_args.save_model_every_epoch = False
         model_args.no_save = True
 
-    # Create a MultiLabelClassificationModel
+    # Create a Classification Model with CPU-only
     architecture = model_configs["architecture"]
     pretrained_model = model_configs["model_path"]
-    model = ClassificationModel(architecture, pretrained_model, num_labels=args.num_labels, args=model_args, use_cuda=False)
+    model = ClassificationModel(architecture, pretrained_model, num_labels=args.num_labels, use_cuda=False, args=model_args)
 
     # Train the model
     model.train_model(train_df, eval_df=eval_df)
@@ -377,38 +358,56 @@ def train_multiclass(args, train_df, eval_df, test_df, seed, model_configs):
     predictions, raw_outputs = model.predict(test_df.text.to_list())
     truth = list(test_df.labels)
     result_np, model_outputs, wrong_predictions = model.eval_model(test_df)
-
+    
 
     # Collecting relevant results
     result = {k: float(v) for k, v in result_np.items()}
-
 
     result["acc"] = metrics.accuracy_score(truth, predictions)
     result["prec_micro"] = metrics.precision_score(truth, predictions, average='micro')
     result["prec_macro"] = metrics.precision_score(truth, predictions, average='macro')
     result["rec_micro"] = metrics.recall_score(truth, predictions, average='micro')
     result["rec_macro"] = metrics.recall_score(truth, predictions, average='macro')
-    result["f1_micro"] = metrics.f1_score(truth, predictions, average='micro')
+    result["f1_micro"] = metrics.f1_score(truth, predictions, average='micro')    
     result["f1_macro"] = metrics.f1_score(truth, predictions, average='macro')
 
     return result
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
 
 
-    # Training Arguments
+    # Training Arguments - CPU Optimized
     model_args = NERArgs()
     model_args.labels_list = args.labels_list
     model_args.manual_seed = seed
     model_args.best_model_dir = os.path.join(args.output_dir, "best_model", "")
     model_args.output_dir =  args.output_dir
     model_args.num_train_epochs =  args.epochs_per_seed
-    model_args.fp16 = False
+    model_args.fp16 = False  # Disabled for CPU
+    model_args.use_cuda = False  # Explicitly disable CUDA
     model_args.max_seq_length = args.max_seq_length
-    model_args.train_batch_size = args.train_batch_size
+    # CPU-optimized batch size (typically smaller for CPU)
+    model_args.train_batch_size = min(args.train_batch_size, 8)  # Cap at 8 for CPU
+    model_args.eval_batch_size = min(args.train_batch_size, 8)   # Cap at 8 for CPU
     model_args.save_steps = -1
-    model_args.use_multiprocessing = False
+    model_args.use_multiprocessing = False  # Disabled for CPU compatibility
+    model_args.use_multiprocessing_for_evaluation = False
     # model_args.save_model_every_epoch = False
     if "do_lower_case" in model_configs:
         model_args.do_lower_case = model_configs["do_lower_case"]
@@ -417,6 +416,7 @@ def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
     model_args.save_eval_checkpoints = False
     # model_args.no_save = True
     model_args.overwrite_output_dir = True
+    model_args.silent = False  # Keep logging for CPU debugging
 
     if not args.report_per_epoch:
         model_args.save_model_every_epoch = False
@@ -424,15 +424,15 @@ def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
 
 
 
-    # Create a NERModel
+    # Create a NERModel with CPU-only
     architecture = model_configs["architecture"]
     pretrained_model = model_configs["model_path"]
-    model = NERModel(architecture, pretrained_model, args=model_args, use_cuda=False)
+    model = NERModel(architecture, pretrained_model, use_cuda=False, args=model_args)
 
     # Train the model
     model.train_model(train_df, eval_df=eval_df)
 
-
+    
     # Getting true labels
     labels = []
     temp = []
@@ -470,6 +470,13 @@ def train_ner(args, train_df, eval_df, test_df, seed, model_configs):
     result_seqeval['classification_report'] = str(classification_report(y_true, y_pred))
 
     return result_seqeval
+
+
+
+
+
+
+
 
 
 
@@ -612,7 +619,7 @@ def loadData(args):
                 test_data.append([text, labels])
 
         test_df = pd.DataFrame(test_data, columns=['text', 'labels'])
-
+ 
         return train_df, eval_df, test_df, 1
 
 
@@ -620,7 +627,7 @@ def loadData(args):
 
         train_data = []
         seq = 0
-        with open(os.path.join(args.data_dir, "train.txt"), encoding='utf-8') as f:
+        with open(os.path.join(args.data_dir, "train.txt")) as f:
             lines = f.readlines()
             for line in lines:
                 if len(line) == 1:
@@ -633,19 +640,19 @@ def loadData(args):
 
         dev_data = []
         seq = 0
-        with open(os.path.join(args.data_dir, "dev.txt"), encoding='utf-8') as f:
+        with open(os.path.join(args.data_dir, "dev.txt")) as f:
             lines = f.readlines()
             for line in lines:
                 if len(line) == 1:
                     seq = seq + 1
                 else:
                     dev_data.append([seq]+[l.replace("\n", "") for l in line.split("\t")])
-
+    
         eval_df = pd.DataFrame(dev_data, columns=["sentence_id", "words", "labels"])
 
         test_data = []
         seq = 0
-        with open(os.path.join(args.data_dir, "test.txt"), encoding='utf-8') as f:
+        with open(os.path.join(args.data_dir, "test.txt")) as f:
             lines = f.readlines()
             for line in lines:
                 if len(line) == 1:
@@ -675,17 +682,24 @@ def main():
 
     ## Main parameters
     parser.add_argument("--dataset",
-                        default = "IndiaPoliceEvents_docs",
+                        default = "insightCrime",
                         type=str,
                         help="The input dataset.")
     parser.add_argument("--report_per_epoch",
-                        default = True,
+                        default = False,
                         action='store_true',
                         help="If true, will output the report per epoch.")
+    parser.add_argument("--cpu_only",
+                        default = True,
+                        action='store_true',
+                        help="Force CPU-only training (automatically set to True in this script).")
 
 
     args = parser.parse_args()
 
+    # Force CPU-only mode
+    args.cpu_only = True
+    print("Running in CPU-only mode. Training will be slower but compatible with systems without GPU.")
 
     ## Loading the configurations and relevant variables
     data_json = os.path.join("./configs/", args.dataset+".json")
@@ -697,26 +711,31 @@ def main():
 
     args.data_dir = os.path.join("./data/", args.dataset, "")
 
+    # CPU-specific adjustments
+    if hasattr(args, 'train_batch_size') and args.train_batch_size > 8:
+        print(f"Reducing batch size from {args.train_batch_size} to 8 for CPU optimization")
+        args.original_batch_size = args.train_batch_size
+        args.train_batch_size = 8
 
     ## Loading the datasets
     train_df, eval_df, test_df, args.num_labels = loadData(args)
-
+    
     if args.task == "ner":
         with open(os.path.join(args.data_dir, "labels.json")) as json_file:
             args.labels_list = json.load(json_file)
 
-
+    
     ## Running experiments for all the models in configs:
     for model_configs in args.models:
-
-        # args.output_dir = os.path.join("./outputs/", args.dataset + "_" + model_configs["model_name"], "")
-        args.output_dir = os.path.join("./outputs/", args.dataset, "")
         
+        # args.output_dir = os.path.join("./outputs/", args.dataset + "_" + model_configs["model_name"], "")
+        args.output_dir = os.path.join("./outputs/", args.dataset + "_cpu", "")
         args.train_batch_size = int(2048/args.max_seq_length)
-        train_multi_seed(args, train_df, eval_df, test_df, model_configs)
 
+        print(f"Training {model_configs['model_name']} on {args.dataset} dataset in CPU-only mode...")
+        train_multi_seed(args, train_df, eval_df, test_df, model_configs)
+        
 
 
 if __name__ == "__main__":
-
     main()
