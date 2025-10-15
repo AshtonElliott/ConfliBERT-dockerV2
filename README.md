@@ -75,8 +75,14 @@ A typical config file (`configs/insightCrime.json`) might look like:
 
 ### Build the Docker Image
 
+**For CPU-only (Mac/PC without NVIDIA GPU):**
 ```bash
-docker build -t <Image Name> .
+docker build --build-arg DEVICE=cpu -t <Image Name> .
+```
+
+**For GPU (PC with NVIDIA GPU):**
+```bash
+docker build --build-arg DEVICE=gpu -t <Image Name> .
 ```
 
 Note that "Image Name" is whatever you wish to name the image. 
