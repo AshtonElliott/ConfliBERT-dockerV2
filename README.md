@@ -77,15 +77,15 @@ A typical config file (`configs/insightCrime.json`) might look like:
 
 **For CPU-only (Mac/PC without NVIDIA GPU):**
 ```bash
-docker build --build-arg DEVICE=cpu -t <Image Name> .
+docker build --build-arg DEVICE=cpu -t conflibertcpu .
 ```
 
 **For GPU (PC with NVIDIA GPU):**
 ```bash
-docker build --build-arg DEVICE=gpu -t <Image Name> .
+docker build --build-arg DEVICE=gpu -t conflibertgpu .
 ```
 
-Note that "Image Name" is whatever you wish to name the image. 
+Note that "conflibbertgpu" and "conflibertgpu" are simply names.
 
 ---
 
@@ -98,7 +98,7 @@ docker run --rm -it \
   -v "$(pwd)/configs:/app/configs" \
   -v "$(pwd)/../outputs:/app/outputs" \
   -v "$(pwd)/../logs:/app/logs" \
-  <Image Name> \
+  conflibertcpu \
   python3 finetune_data_cpu.py --dataset <your-dataset-name>
 ```
 
@@ -109,7 +109,7 @@ docker run --rm -it \
   -v "$(pwd)/configs:/app/configs" \
   -v "$(pwd)/../outputs:/app/outputs" \
   -v "$(pwd)/../logs:/app/logs" \
-  <Image Name> \
+  conflibertcpu \
   python3 finetune_data_cpu_low.py --dataset <your-dataset-name>
 ```
 
@@ -120,7 +120,7 @@ docker run --gpus all --rm -it \
   -v "$(pwd)/configs:/app/configs" \
   -v "$(pwd)/../outputs:/app/outputs" \
   -v "$(pwd)/../logs:/app/logs" \
-  <Image Name> \
+  conflibertgpu \
   python3 finetune_data.py --dataset <your-dataset-name>
 ```
 
@@ -134,7 +134,7 @@ docker run --gpus all --rm -it \
   ```
 - **Override config at runtime:**
   ```bash
-  docker run --rm -it <Image Name> python3 finetune_data_cpu.py --dataset insightCrime --train_batch_size 4
+  docker run --rm -it conflibertcpu python3 finetune_data_cpu.py --dataset insightCrime --train_batch_size 4
   ```
 - **Mount additional volumes:**
   Add more `-v` flags to share other folders with the container.
