@@ -2,12 +2,6 @@
 
 This repository provides a Dockerized environment for fine-tuning the ConfliBERT model for text classification and NER tasks. (Note: This setup is specifically for ConfliBERT, not for other BERT models.)
 
-## Prerequisites
-- **Docker Desktop**: Required for building and running containers. Download from [Docker's official site](https://www.docker.com/products/docker-desktop/).
-- **Git (specifically Git, not Github Desktop)**: Required to clone the repository. You can download from (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git). 
-- **Sufficient resources**: For large models/datasets, increase CPU and memory allocation in Docker Desktop (see Notes below).
-- **(Optional) NVIDIA GPU**: For GPU acceleration, install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). Keep in mind that this is a NVIDIAN product, so it will only run with NVIDIA GPUs and drivers.
-
 ## Project Overview
 ConfliBERT is a transformer-based model designed for event extraction, text classification, and named entity recognition (NER) in conflict and security-related datasets. This repository provides a reproducible, containerized workflow for training and evaluating ConfliBERT on your own data.
 
@@ -17,9 +11,17 @@ Supported tasks:
 - Binary classification
 - Named Entity Recognition (NER)
 
+## Prerequisites
+- **Docker Desktop**: Required for building and running containers. Download from [Docker's official site](https://www.docker.com/products/docker-desktop/).
+- **Git (specifically Git, not Github Desktop)**: Required to clone the repository. You can download from (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git). 
+- **Sufficient resources**: For large models/datasets, increase CPU and memory allocation in Docker Desktop (see Notes below).
+- **(Optional) NVIDIA GPU**: For GPU acceleration, install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). Keep in mind that this is a NVIDIAN product, so it will only run with NVIDIA GPUs and drivers.
+
 ## Getting Started
 
 ### Clone the Repository
+
+Open your Operating System's Terminal and type in each line seperately.
 
 ```bash
 git clone https://github.com/AshtonElliott/ConfliBERT-dockerV2.git
