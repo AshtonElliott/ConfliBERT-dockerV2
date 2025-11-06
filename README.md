@@ -12,7 +12,7 @@ Supported tasks:
 - Named Entity Recognition (NER)
 
 ## Prerequisites
-- **Docker Desktop**: Required for building and running containers. Download from [Docker's official site](https://www.docker.com/products/docker-desktop/){target="_blank"}.
+- **Docker Desktop**: Required for building and running containers. Download from [Docker's official site](https://www.docker.com/products/docker-desktop/){target="_blank"} .
 - **Git (specifically Git, not Github Desktop)**: Required to clone the repository. You can download from (https://git-scm.com/book/en/v2/Getting-Started-Installing-Git). 
 - **Sufficient resources**: For large models/datasets, increase CPU and memory allocation in Docker Desktop (see Notes below).
 - **(Optional) NVIDIA GPU**: For GPU acceleration, install the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). Keep in mind that this is a NVIDIAN product, so it will only run with NVIDIA GPUs and drivers.
