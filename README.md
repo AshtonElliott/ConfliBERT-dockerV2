@@ -28,49 +28,7 @@ git clone https://github.com/AshtonElliott/ConfliBERT-dockerV2.git
 cd ConfliBERT-dockerV2
 ```
 
-### Prepare Your Data and Configs
-- Place your datasets in the `data/` directory.
-- Place your configuration files in the `configs/` directory.
-
----
-
-## Directory Structure
-
-- `data/` — Place your datasets here. Each dataset should be in its own subfolder (e.g., `data/insightCrime/`).
-- `configs/` — Place your experiment configuration JSON files here.
-- `outputs/` — Model checkpoints and results will be saved here (created automatically).
-- `logs/` — Training and evaluation logs will be saved here (created automatically).
-- `Dockerfile` — The container build instructions for CPU/GPU environments.
-- `finetune_data_cpu.py` — Main script for CPU-only fine-tuning.
-- `finetune_data_cpu_low.py` - Main script for laptop-based CPU-only fine-tuning
-- `finetune_data.py` — Main script for GPU fine-tuning.
-- `requirements-cpu.txt` / `requirements-gpu.txt` — Python dependencies for each environment.
-
----
-
-## Example Configuration File
-
-A typical config file (`configs/insightCrime.json`) might look like:
-```json
-{
-  "task": "multilabel",
-  "models": [
-    {
-      "architecture": "bert",
-      "model_name": "ConfliBERT",
-      "model_path": "eventdata/ConfliBERT-base-uncased"
-    }
-  ],
-  "train_batch_size": 8,
-  "epochs_per_seed": 3,
-  "initial_seed": 42,
-  "num_of_seeds": 1
-}
-```
-- `task`: One of `multilabel`, `multiclass`, `binary`, or `ner`.
-- `models`: List of model configs (architecture, name, path).
-- `train_batch_size`, `epochs_per_seed`, etc.: Training parameters.
-
+Before we explain how to add datasets, let's make sure everything was installed correctly.
 ---
 
 ## Docker Build Instructions
@@ -127,6 +85,46 @@ docker run --gpus all --rm -it \
 ```
 
 ---
+
+## Directory Structure
+
+- `data/` — Place your datasets here. Each dataset should be in its own subfolder (e.g., `data/insightCrime/`).
+- `configs/` — Place your experiment configuration JSON files here.
+- `outputs/` — Model checkpoints and results will be saved here (created automatically).
+- `logs/` — Training and evaluation logs will be saved here (created automatically).
+- `Dockerfile` — The container build instructions for CPU/GPU environments.
+- `finetune_data_cpu.py` — Main script for CPU-only fine-tuning.
+- `finetune_data_cpu_low.py` - Main script for laptop-based CPU-only fine-tuning
+- `finetune_data.py` — Main script for GPU fine-tuning.
+- `requirements-cpu.txt` / `requirements-gpu.txt` — Python dependencies for each environment.
+
+---
+
+## Example Configuration File
+
+A typical config file (`configs/insightCrime.json`) might look like:
+```json
+{
+  "task": "multilabel",
+  "models": [
+    {
+      "architecture": "bert",
+      "model_name": "ConfliBERT",
+      "model_path": "eventdata/ConfliBERT-base-uncased"
+    }
+  ],
+  "train_batch_size": 8,
+  "epochs_per_seed": 3,
+  "initial_seed": 42,
+  "num_of_seeds": 1
+}
+```
+- `task`: One of `multilabel`, `multiclass`, `binary`, or `ner`.
+- `models`: List of model configs (architecture, name, path).
+- `train_batch_size`, `epochs_per_seed`, etc.: Training parameters.
+
+---
+
 
 ## Advanced Usage
 
