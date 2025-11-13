@@ -84,9 +84,13 @@ docker run --gpus all --rm -it \
   python3 finetune_data.py --dataset BBC_News_Demo
 ```
 
+Now that we've ensured that the basic code works, we will now explain how to add your own datasets into your image.
+
 ---
 
 ## Directory Structure
+
+Before we begin adding datasets, here's how the directory is structured.
 
 - `data/` — Place your datasets here. Each dataset should be in its own subfolder (e.g., `data/insightCrime/`).
 - `configs/` — Place your experiment configuration JSON files here.
@@ -98,9 +102,11 @@ docker run --gpus all --rm -it \
 - `finetune_data.py` — Main script for GPU fine-tuning.
 - `requirements-cpu.txt` / `requirements-gpu.txt` — Python dependencies for each environment.
 
+For adding new datasets, we will be focusing on the "data" and "configs" folder.
+
 ---
 
-## Example Configuration File
+## Configuration Files
 
 A typical config file (`configs/insightCrime.json`) might look like:
 ```json
@@ -122,6 +128,8 @@ A typical config file (`configs/insightCrime.json`) might look like:
 - `task`: One of `multilabel`, `multiclass`, `binary`, or `ner`.
 - `models`: List of model configs (architecture, name, path).
 - `train_batch_size`, `epochs_per_seed`, etc.: Training parameters.
+
+Once you have a config file that looks similiar to this, drop it into the "configs" folder.
 
 ---
 
