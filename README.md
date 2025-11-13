@@ -133,6 +133,19 @@ Once you have a config file that looks similiar to this, drop it into the "confi
 
 ---
 
+## Adding Data
+
+To add your dataset, create a file within the data folder with the same name as your config file.
+
+<img width="262" height="574" alt="Dataset Folder" src="https://github.com/user-attachments/assets/3a56c9c8-cc9b-4bb1-b5fc-defcc6c7f13e" />
+
+Then, add your data files into the newly created folder.
+
+<img width="394" height="157" alt="Datasets" src="https://github.com/user-attachments/assets/a7dc8300-990e-423a-9dfe-a46be4d9714f" />
+
+Once you have completed this, rebuild the image with the same method as before.
+
+---
 
 ## Advanced Usage
 
