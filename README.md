@@ -59,7 +59,7 @@ docker run --rm -it \
   -v "$(pwd)/../outputs:/app/outputs" \
   -v "$(pwd)/../logs:/app/logs" \
   conflibertcpu \
-  python3 finetune_data_cpu.py --dataset <your-dataset-name>
+  python3 finetune_data_cpu.py --dataset BBC_News_Demo
 ```
 
 **Run on Low/Laptop CPU:**
@@ -70,7 +70,7 @@ docker run --rm -it \
   -v "$(pwd)/../outputs:/app/outputs" \
   -v "$(pwd)/../logs:/app/logs" \
   conflibertcpu \
-  python3 finetune_data_cpu_low.py --dataset <your-dataset-name>
+  python3 finetune_data_cpu_low.py --dataset BBC_News_Demo
 ```
 
 **Run on GPU:**
@@ -81,7 +81,7 @@ docker run --gpus all --rm -it \
   -v "$(pwd)/../outputs:/app/outputs" \
   -v "$(pwd)/../logs:/app/logs" \
   conflibertgpu \
-  python3 finetune_data.py --dataset <your-dataset-name>
+  python3 finetune_data.py --dataset BBC_News_Demo
 ```
 
 ---
