@@ -27,8 +27,8 @@ Open your Operating System's Terminal and type in each line seperately.
 git clone https://github.com/AshtonElliott/ConfliBERT-dockerV2.git
 cd ConfliBERT-dockerV2
 ```
-
 Before we explain how to add datasets, let's make sure everything was installed correctly.
+
 ---
 
 ## Docker Build Instructions
