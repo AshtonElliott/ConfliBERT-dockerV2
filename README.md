@@ -167,7 +167,9 @@ Once you have completed this, rebuild the image with the same method as before.
 
 ---
 
-## Pushing Docker Images to Docker Hub
+## Pushing Docker Images to Docker Hub (Optional)
+
+Note: Pushing your image to Docker Hub is NOT REQUIRED to function properly.
 
 1. **Login to Docker Hub:**
    ```bash
