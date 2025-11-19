@@ -108,7 +108,7 @@ For adding new datasets, we will be focusing on the "data" and "configs" folder.
 
 ## Configuration Files
 
-A typical config file (`configs/insightCrime.json`) might look like:
+A typical config file (`configs/insightCrime.json`) should look like:
 ```json
 {
   "task": "multilabel",
