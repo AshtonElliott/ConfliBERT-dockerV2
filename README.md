@@ -45,7 +45,7 @@ docker build --build-arg DEVICE=cpu -t conflibertcpu .
 docker build --build-arg DEVICE=gpu -t conflibertgpu .
 ```
 
-Note that "conflibbertgpu" and "conflibertgpu" are simply names.
+Note that "conflibertgpu" and "conflibertgpu" are simply names.
 
 ---
 
